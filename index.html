@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>図書紹介</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f172a;
+      --bg-soft: #1e293b;
+      --card: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #1f2937;
+      --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.7);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+        sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top, #1d283a 0, #020617 55%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 40px;
+    }
+
+    .app-frame {
+      width: 100%;
+      max-width: 1080px;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), #020617);
+      border-radius: 28px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      box-shadow: var(--shadow-soft);
+      padding: 24px 22px 26px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .app-frame::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.2), transparent 55%),
+        radial-gradient(circle at 100% 20%, rgba(129, 140, 248, 0.22), transparent 55%);
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 2px 6px 10px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+      margin-bottom: 16px;
+    }
+
+    .title-block {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .logo-dot {
+      width: 26px;
+      height: 26px;
+      border-radius: 12px;
+      background:
+        conic-gradient(from 210deg, #22d3ee, #6366f1, #f97316, #22c55e, #22d3ee);
+      box-shadow:
+        0 0 0 1px rgba(15, 23, 42, 0.9),
+        0 0 14px rgba(96, 165, 250, 0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .logo-dot::after {
+      content: "";
+      position: absolute;
+      inset: 3px;
+      border-radius: 9px;
+      background: radial-gradient(circle at 30% 0, #e5e7eb, #020617);
+      opacity: 0.9;
+      mix-blend-mode: screen;
+    }
+
+    h1 {
+      font-size: clamp(1.32rem, 1.25rem + 0.4vw, 1.6rem);
+      letter-spacing: 0.03em;
+      margin: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35em;
+    }
+
+    h1 span.accent {
+      background: linear-gradient(120deg, #38bdf8, #a855f7);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 700;
+    }
+
+    .subtitle {
+      margin: 0;
+      font-size: 0.87rem;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .header-link {
+      color: var(--accent);
+      font-size: 0.9rem;
+      text-decoration: none;
+    }
+    .header-link:hover {
+      text-decoration: underline;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.75rem;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.14), transparent 65%);
+      color: var(--muted);
+    }
+
+    .badge-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 4px rgba(34, 197, 94, 0.25);
+    }
+
+    .small-text {
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    main {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 10px 8px;
+      background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.16), transparent 65%);
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+    }
+
+    .toolbar-left,
+    .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .search-box {
+      position: relative;
+      min-width: min(260px, 100%);
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 7px 30px 7px 26px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.95);
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+      box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9);
+      transition: border-color 0.16s ease, box-shadow 0.16s ease,
+        background 0.16s ease, transform 0.08s ease;
+    }
+
+    .search-input::placeholder {
+      color: #6b7280;
+    }
+
+    .search-input:focus {
+      border-color: rgba(56, 189, 248, 0.9);
+      box-shadow:
+        0 0 0 1px rgba(8, 47, 73, 0.9),
+        0 0 0 1px rgba(56, 189, 248, 0.5);
+      background: #020617;
+      transform: translateY(-0.5px);
+    }
+
+    .search-icon,
+    .clear-icon {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.9rem;
+      color: #6b7280;
+      pointer-events: none;
+    }
+
+    .search-icon {
+      left: 9px;
+    }
+
+    .clear-icon {
+      right: 9px;
+      cursor: pointer;
+      pointer-events: auto;
+      padding: 2px;
+      border-radius: 50%;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .clear-icon:hover {
+      background: rgba(148, 163, 184, 0.25);
+      color: #e5e7eb;
+    }
+
+    .filter-select {
+      padding: 6px 28px 6px 10px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background:
+        linear-gradient(135deg, rgba(15, 23, 42, 0.96), rgba(15, 23, 42, 0.9)),
+        radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.16), transparent 55%);
+      color: var(--text);
+      font-size: 0.78rem;
+      outline: none;
+      appearance: none;
+      position: relative;
+      cursor: pointer;
+      min-width: 120px;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.9);
+      background-position: 0 0, 100% 50%;
+      background-repeat: no-repeat;
+    }
+
+    .filter-select:focus {
+      border-color: rgba(56, 189, 248, 0.9);
+      box-shadow:
+        0 0 0 1px rgba(8, 47, 73, 0.9),
+        0 0 0 1px rgba(56, 189, 248, 0.5);
+    }
+
+    .toolbar-right button {
+      padding: 6px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background:
+        radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.26), transparent 55%),
+        linear-gradient(145deg, #0369a1, #0f172a);
+      color: #e5e7eb;
+      font-size: 0.78rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow:
+        0 10px 25px rgba(15, 23, 42, 0.85),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
+      transition: transform 0.08s ease, box-shadow 0.12s ease,
+        filter 0.12s ease, background 0.12s ease;
+    }
+
+    .toolbar-right button span.icon {
+      font-size: 0.95rem;
+    }
+
+    .toolbar-right button:hover {
+      transform: translateY(-0.5px);
+      box-shadow:
+        0 14px 35px rgba(15, 23, 42, 0.95),
+        0 0 0 1px rgba(56, 189, 248, 0.6);
+      filter: brightness(1.02);
+    }
+
+    .toolbar-right button:active {
+      transform: translateY(0.5px) scale(0.99);
+      box-shadow:
+        0 6px 16px rgba(15, 23, 42, 0.85),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
+      filter: brightness(0.97);
+    }
+
+    .toolbar-meta {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .toolbar-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.7);
+    }
+
+    .grid-wrapper {
+      margin-top: 4px;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background:
+        radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.14), transparent 60%),
+        radial-gradient(circle at 100% 0, rgba(129, 140, 248, 0.16), transparent 60%),
+        linear-gradient(155deg, rgba(15, 23, 42, 0.94), #020617);
+      padding: 14px 14px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .grid-wrapper::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background-image: linear-gradient(
+        to bottom,
+        rgba(148, 163, 184, 0.13) 0,
+        transparent 38%
+      );
+      mix-blend-mode: soft-light;
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .grid-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .grid-header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+
+    .pill-count {
+      padding: 2px 9px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.6);
+      color: #e5e7eb;
+      font-size: 0.78rem;
+    }
+
+    .grid-header-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .legend-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+    }
+
+    .book-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 14px;
+      padding: 6px 2px 4px;
+      z-index: 1;
+    }
+
+    .book-card {
+      position: relative;
+      border-radius: 16px;
+      background:
+        radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.25), transparent 55%),
+        radial-gradient(circle at 100% 100%, rgba(79, 70, 229, 0.25), transparent 55%),
+        linear-gradient(150deg, rgba(15, 23, 42, 0.97), #020617);
+      padding: 10px 9px 9px;
+      border: 1px solid rgba(148, 163, 184, 0.75);
+      box-shadow:
+        0 16px 38px rgba(15, 23, 42, 0.9),
+        0 0 0 1px rgba(15, 23, 42, 0.95);
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.16s ease,
+        border-color 0.16s ease, background 0.18s ease;
+      overflow: hidden;
+    }
+
+    .book-card::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        circle at 50% 0,
+        rgba(248, 250, 252, 0.22),
+        transparent 55%
+      );
+      mix-blend-mode: soft-light;
+      opacity: 0.65;
+      pointer-events: none;
+    }
+
+    .book-card:hover {
+      transform: translateY(-3px);
+      box-shadow:
+        0 22px 55px rgba(15, 23, 42, 0.98),
+        0 0 0 1px rgba(56, 189, 248, 0.7);
+      border-color: rgba(56, 189, 248, 0.95);
+    }
+
+    .book-card:active {
+      transform: translateY(-1px) scale(0.995);
+      box-shadow:
+        0 12px 32px rgba(15, 23, 42, 0.96),
+        0 0 0 1px rgba(15, 23, 42, 0.95);
+    }
+
+    .book-cover-wrapper {
+      position: relative;
+      border-radius: 11px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.9);
+      background: radial-gradient(circle at 50% 0, #f9fafb, #cbd5f5);
+      aspect-ratio: 0.72 / 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .book-cover {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: transform 0.2s ease;
+    }
+
+    .book-card:hover .book-cover {
+      transform: scale(1.03);
+    }
+
+    .book-placeholder-initials {
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #1f2937;
+      font-size: 0.95rem;
+      text-align: center;
+      padding: 0 4px;
+    }
+
+    .book-badge-corner {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      color: #e5e7eb;
+      font-size: 0.65rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      backdrop-filter: blur(6px);
+    }
+
+    .book-meta {
+      margin-top: 7px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .book-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #e5e7eb;
+      line-height: 1.4;
+      max-height: 2.8em;
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+    }
+
+    .book-author {
+      font-size: 0.7rem;
+      color: var(--muted);
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      overflow: hidden;
+    }
+
+    .book-year {
+      margin-left: auto;
+      font-size: 0.68rem;
+      color: rgba(148, 163, 184, 0.9);
+    }
+
+    .status-pill {
+      position: absolute;
+      bottom: 7px;
+      right: 7px;
+      padding: 2px 7px;
+      font-size: 0.64rem;
+      border-radius: 999px;
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(148, 163, 184, 0.75);
+      color: rgba(248, 250, 252, 0.95);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      backdrop-filter: blur(6px);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.35);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px 12px 30px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .empty-icon {
+      font-size: 1.6rem;
+      margin-bottom: 10px;
+    }
+
+    .empty-hint {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: rgba(148, 163, 184, 0.9);
+    }
+
+    .loader {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .loader-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.65);
+      animation: pulse 1s infinite ease-in-out alternate;
+    }
+
+    .loader-dot:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .loader-dot:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(0.9);
+        opacity: 0.6;
+      }
+      100% {
+        transform: scale(1.1);
+        opacity: 1;
+      }
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: radial-gradient(circle at 10% 0, rgba(56, 189, 248, 0.38), transparent 60%),
+        radial-gradient(circle at 90% 100%, rgba(129, 140, 248, 0.42), transparent 60%),
+        rgba(15, 23, 42, 0.86);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+      padding: 20px 14px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.16s ease;
+    }
+
+    .modal-backdrop.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 720px;
+      border-radius: 22px;
+      background: radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.25), transparent 60%),
+        radial-gradient(circle at 100% 0, rgba(129, 140, 248, 0.22), transparent 60%),
+        linear-gradient(160deg, #020617, #020617);
+      border: 1px solid rgba(148, 163, 184, 0.55);
+      box-shadow:
+        0 32px 80px rgba(15, 23, 42, 0.96),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
+      padding: 18px 18px 16px;
+      position: relative;
+      color: #e5e7eb;
+      transform: translateY(10px) scale(0.99);
+      opacity: 0;
+      transition: transform 0.18s ease, opacity 0.18s ease;
+    }
+
+    .modal-backdrop.visible .modal {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 14px;
+    }
+
+    .modal-title-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+    }
+
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    .modal-subtitle {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--muted);
+    }
+
+    .chip {
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.75rem;
+    }
+
+    .modal-close {
+      border: none;
+      background: rgba(15, 23, 42, 0.85);
+      color: rgba(148, 163, 184, 0.9);
+      border-radius: 999px;
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow:
+        0 4px 10px rgba(15, 23, 42, 0.9),
+        0 0 0 1px rgba(15, 23, 42, 0.96);
+      transition: background 0.12s ease, color 0.12s ease,
+        transform 0.08s ease, box-shadow 0.12s ease;
+    }
+
+    .modal-close:hover {
+      background: rgba(15, 23, 42, 0.95);
+      color: #e5e7eb;
+      transform: translateY(-0.5px);
+      box-shadow:
+        0 7px 16px rgba(15, 23, 42, 0.96),
+        0 0 0 1px rgba(148, 163, 184, 0.8);
+    }
+
+    .modal-close:active {
+      transform: translateY(0.5px) scale(0.97);
+      box-shadow:
+        0 3px 7px rgba(15, 23, 42, 0.9),
+        0 0 0 1px rgba(15, 23, 42, 0.98);
+    }
+
+    .modal-body {
+      display: grid;
+      grid-template-columns: minmax(0, 1.4fr) minmax(0, 2.1fr);
+      gap: 18px;
+      align-items: flex-start;
+    }
+
+    .modal-cover-box {
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.8);
+      background:
+        radial-gradient(circle at 50% 0, rgba(248, 250, 252, 0.24), transparent 60%),
+        linear-gradient(160deg, #020617, #020617);
+      padding: 10px 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .modal-cover {
+      width: 100%;
+      max-width: 220px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(148, 163, 184, 0.9);
+      background: radial-gradient(circle at 50% 0, #f9fafb, #cbd5f5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 0.72 / 1;
+    }
+
+    .modal-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .modal-cover-placeholder {
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      color: #1f2937;
+      font-size: 1rem;
+      text-align: center;
+      padding: 0 6px;
+    }
+
+    .modal-cover-meta {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .modal-info {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.86rem;
+    }
+
+    .field-row {
+      display: flex;
+      gap: 6px;
+      align-items: flex-start;
+      line-height: 1.6;
+    }
+
+    .field-label {
+      min-width: 70px;
+      color: rgba(148, 163, 184, 0.95);
+      font-size: 0.78rem;
+    }
+
+    .field-value {
+      flex: 1;
+    }
+
+    .description-box {
+      margin-top: 3px;
+      padding: 8px 9px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: rgba(15, 23, 42, 0.9);
+      max-height: 160px;
+      overflow: auto;
+      font-size: 0.83rem;
+      line-height: 1.6;
+      color: rgba(226, 232, 240, 0.98);
+    }
+
+    .modal-footer {
+      margin-top: 14px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.78rem;
+      color: var(--muted);
+      border-top: 1px solid rgba(148, 163, 184, 0.45);
+      padding-top: 10px;
+    }
+
+    .modal-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .modal-link {
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.7);
+      background: rgba(15, 23, 42, 0.9);
+      color: #e5e7eb;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: background 0.12s ease, border-color 0.12s ease,
+        transform 0.08s ease, box-shadow 0.12s ease;
+    }
+
+    .modal-link:hover {
+      background: rgba(15, 23, 42, 0.96);
+      border-color: rgba(56, 189, 248, 0.8);
+      transform: translateY(-0.5px);
+      box-shadow: 0 7px 18px rgba(15, 23, 42, 0.96);
+    }
+
+    .modal-link:active {
+      transform: translateY(0.5px) scale(0.98);
+      box-shadow: 0 3px 7px rgba(15, 23, 42, 0.94);
+    }
+
+    .modal-link span.icon {
+      font-size: 0.92rem;
+    }
+
+    footer {
+      margin-top: 12px;
+      font-size: 0.72rem;
+      color: rgba(148, 163, 184, 0.9);
+      text-align: right;
+    }
+
+    footer a {
+      color: #38bdf8;
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 800px) {
+      .app-frame {
+        padding: 18px 14px 18px;
+        border-radius: 18px;
+      }
+
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .header-right {
+        align-self: stretch;
+        justify-content: space-between;
+      }
+
+      .modal-body {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .modal {
+        padding: 16px 14px 14px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      body {
+        padding: 18px 10px 20px;
+      }
+
+      .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .toolbar-right {
+        justify-content: space-between;
+      }
+
+      .grid-wrapper {
+        padding: 10px 10px 12px;
+      }
+
+      .book-grid {
+        grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-frame">
+    <header>
+      <div class="title-block">
+        <div class="title-row">
+          <div class="logo-dot" aria-hidden="true"></div>
+          <h1><span class="accent">図書ギャラリー</span>ビューア</h1>
+        </div>
+        <p class="subtitle">`booklist.json` に登録したISBNから、書影と書誌情報を一覧表示します。</p>
+      </div>
+      <div class="header-right">
+        <a href="add-book.html" class="header-link">図書登録</a>
+        <div class="badge">
+          <span class="badge-dot"></span>
+          <span>openBD / 国立国会図書館連携データ</span>
+        </div>
+        <span class="small-text" id="summaryText">読み込み待機中</span>
+      </div>
+    </header>
+
+    <main>
+      <section class="toolbar" aria-label="検索とフィルタ">
+        <div class="toolbar-left">
+          <div class="search-box">
+            <span class="search-icon" aria-hidden="true">🔍</span>
+            <input
+              id="searchInput"
+              class="search-input"
+              type="search"
+              placeholder="タイトル・著者・キーワードで絞り込み"
+              autocomplete="off"
+            />
+            <button
+              type="button"
+              id="clearSearch"
+              class="clear-icon"
+              aria-label="検索条件をクリア"
+              title="検索条件をクリア"
+            >
+              ×
+            </button>
+          </div>
+          <select id="sortSelect" class="filter-select" aria-label="並び替え">
+            <option value="title">タイトル順</option>
+            <option value="author">著者名順</option>
+            <option value="year-desc">出版年(新しい順)</option>
+            <option value="year-asc">出版年(古い順)</option>
+          </select>
+        </div>
+        <div class="toolbar-right">
+          <button type="button" id="reloadBtn">
+            <span class="icon">⟳</span>
+            <span>データを再読込</span>
+          </button>
+          <div class="toolbar-meta">
+            <span id="statusText">準備完了</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid-wrapper" aria-live="polite">
+        <div class="grid-header">
+          <div class="grid-header-left">
+            <span>登録図書</span>
+            <span class="pill-count" id="countBadge">0冊</span>
+          </div>
+          <div class="grid-header-right">
+            <span class="legend-dot"></span>
+            <span>書影クリックで詳細表示</span>
+          </div>
+        </div>
+
+        <div id="gridContainer">
+          <div class="empty-state" id="emptyState">
+            <div class="empty-icon" aria-hidden="true">📚</div>
+            <div>まだ図書データが読み込まれていません。</div>
+            <div class="empty-hint">同じフォルダにある `booklist.json` にISBNを登録してください。</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      書影および書誌データは <a href="https://openbd.jp/" target="_blank" rel="noreferrer">openBD</a> API 等の外部サービスを利用しています。
+    </footer>
+  </div>
+
+  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document">
+      <div class="modal-header">
+        <div class="modal-title-group">
+          <div class="modal-title" id="modalTitle"></div>
+          <div class="modal-subtitle">
+            <span id="modalAuthor"></span>
+            <span id="modalPublisherChip" class="chip" style="display:none;"></span>
+            <span id="modalYearChip" class="chip" style="display:none;"></span>
+          </div>
+        </div>
+        <button type="button" class="modal-close" id="modalCloseBtn" aria-label="閉じる">
+          ✕
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="modal-cover-box">
+          <div class="modal-cover" id="modalCover"></div>
+          <div class="modal-cover-meta" id="modalIsbn"></div>
+        </div>
+        <div class="modal-info">
+          <div class="field-row">
+            <div class="field-label">タイトル</div>
+            <div class="field-value" id="fieldTitle"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">著者</div>
+            <div class="field-value" id="fieldAuthor"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">出版社</div>
+            <div class="field-value" id="fieldPublisher"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">出版年</div>
+            <div class="field-value" id="fieldYear"></div>
+          </div>
+          <div class="field-row">
+            <div class="field-label">説明</div>
+            <div class="field-value">
+              <div class="description-box" id="fieldDescription"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div>必要に応じて、下記の外部サイトで詳細をご確認ください。</div>
+        <div class="modal-links" id="modalLinks"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const booklistUrl = "booklist.json"; // 同じフォルダに配置
+
+    function normalizeText(text) {
+      if (!text) return "";
+      return text
+        .toString()
+        .normalize("NFKC")
+        .toLowerCase();
+    }
+
+    function pickInitials(str) {
+      if (!str) return "BOOK";
+      const words = str.replace(/[［\[\(（【『「].*$/, "").split(/\s+/).filter(Boolean);
+      if (words.length === 0) return "BOOK";
+      if (words.length === 1) {
+        const w = words[0];
+        if (w.length <= 4) return w.toUpperCase();
+        return w.slice(0, 4).toUpperCase();
+      }
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+
+    function yearFromDateText(text) {
+      if (!text) return "";
+      const m = text.match(/\d{4}/);
+      return m ? m[0] : "";
+    }
+
+    async function fetchJson(url) {
+      const res = await fetch(url, { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error("HTTP " + res.status + " " + res.statusText);
+      }
+      return res.json();
+    }
+
+    async function fetchOpenBd(isbnList) {
+      if (!isbnList || isbnList.length === 0) return [];
+      const url = "https://api.openbd.jp/v1/get?isbn=" + encodeURIComponent(isbnList.join(","));
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error("openBD API error: " + res.status);
+      }
+      return res.json();
+    }
+
+    function buildBookRecords(listData, openBdData) {
+      const map = new Map();
+      if (Array.isArray(openBdData)) {
+        openBdData.forEach((item) => {
+          if (!item || !item.summary) return;
+          const s = item.summary;
+          const isbn = s.isbn;
+          if (!isbn) return;
+          map.set(isbn, {
+            title: s.title || "",
+            author: s.author || "",
+            publisher: s.publisher || "",
+            pubdate: s.pubdate || "",
+            cover: s.cover || "",
+            volume: s.volume || "",
+          });
+        });
+      }
+
+      const nowYear = new Date().getFullYear();
+      return listData.map((base, index) => {
+        const isbn = String(base.isbn || base.ISBN || "").trim();
+        const ext = isbn ? map.get(isbn) : undefined;
+
+        const title = base.title || (ext && ext.title) || "";
+        const author = base.author || (ext && ext.author) || "";
+        const publisher = base.publisher || (ext && ext.publisher) || "";
+        const pubdate = base.pubdate || base.pubDate || (ext && ext.pubdate) || "";
+        const description =
+          base.description || base.note || (ext && (ext.description || ext.volume)) || "";
+
+        const year = yearFromDateText(pubdate);
+        const isRecent = year && Number(year) >= nowYear - 1;
+
+        return {
+          id: index,
+          isbn,
+          title: title || "(タイトル未設定)",
+          author: author || "",
+          publisher: publisher || "",
+          pubdate,
+          year,
+          isRecent,
+          cover: base.cover || (ext && ext.cover) || "",
+          description,
+          raw: base,
+        };
+      });
+    }
+
+    function applyFiltersAndSort(books, keyword, sortKey) {
+      let filtered = books;
+      if (keyword) {
+        const q = normalizeText(keyword);
+        filtered = books.filter((b) => {
+          const t = [
+            b.title,
+            b.author,
+            b.publisher,
+            b.isbn,
+            b.year,
+            b.description,
+          ]
+            .map(normalizeText)
+            .join(" ");
+          return t.includes(q);
+        });
+      }
+
+      const sorted = [...filtered];
+      sorted.sort((a, b) => {
+        switch (sortKey) {
+          case "author": {
+            const aa = normalizeText(a.author || "zzz");
+            const bb = normalizeText(b.author || "zzz");
+            if (aa === bb) return a.title.localeCompare(b.title, "ja");
+            return aa.localeCompare(bb, "ja");
+          }
+          case "year-desc": {
+            const ya = a.year ? Number(a.year) : 0;
+            const yb = b.year ? Number(b.year) : 0;
+            if (ya === yb) return a.title.localeCompare(b.title, "ja");
+            return yb - ya;
+          }
+          case "year-asc": {
+            const ya2 = a.year ? Number(a.year) : 9999;
+            const yb2 = b.year ? Number(b.year) : 9999;
+            if (ya2 === yb2) return a.title.localeCompare(b.title, "ja");
+            return ya2 - yb2;
+          }
+          case "title":
+          default: {
+            return a.title.localeCompare(b.title, "ja");
+          }
+        }
+      });
+
+      return sorted;
+    }
+
+    function createBookCard(book, onClick) {
+      const card = document.createElement("article");
+      card.className = "book-card";
+      card.tabIndex = 0;
+      card.setAttribute("role", "button");
+      card.setAttribute("aria-label", book.title + " の詳細を表示");
+
+      const coverWrapper = document.createElement("div");
+      coverWrapper.className = "book-cover-wrapper";
+
+      if (book.cover) {
+        const img = document.createElement("img");
+        img.className = "book-cover";
+        img.src = book.cover;
+        img.alt = book.title + " の表紙画像";
+        img.loading = "lazy";
+        img.onerror = () => {
+          img.remove();
+          const ph = document.createElement("div");
+          ph.className = "book-placeholder-initials";
+          ph.textContent = pickInitials(book.title);
+          coverWrapper.appendChild(ph);
+        };
+        coverWrapper.appendChild(img);
+      } else {
+        const ph = document.createElement("div");
+        ph.className = "book-placeholder-initials";
+        ph.textContent = pickInitials(book.title);
+        coverWrapper.appendChild(ph);
+      }
+
+      const badge = document.createElement("div");
+      badge.className = "book-badge-corner";
+      badge.textContent = book.year || "登録図書";
+
+      const meta = document.createElement("div");
+      meta.className = "book-meta";
+
+      const titleEl = document.createElement("div");
+      titleEl.className = "book-title";
+      titleEl.textContent = book.title;
+
+      const authorRow = document.createElement("div");
+      authorRow.style.display = "flex";
+      authorRow.style.alignItems = "center";
+      authorRow.style.gap = "4px";
+
+      const authorEl = document.createElement("div");
+      authorEl.className = "book-author";
+      authorEl.textContent = book.author || "著者情報なし";
+
+      const yearEl = document.createElement("div");
+      yearEl.className = "book-year";
+      yearEl.textContent = book.year || "";
+
+      authorRow.appendChild(authorEl);
+      authorRow.appendChild(yearEl);
+
+      meta.appendChild(titleEl);
+      meta.appendChild(authorRow);
+
+      const status = document.createElement("div");
+      status.className = "status-pill";
+      const dot = document.createElement("span");
+      dot.className = "status-dot";
+      const label = document.createElement("span");
+      label.textContent = book.isRecent ? "最近刊行" : "登録済み";
+      status.appendChild(dot);
+      status.appendChild(label);
+
+      card.appendChild(coverWrapper);
+      card.appendChild(badge);
+      card.appendChild(meta);
+      card.appendChild(status);
+
+      const handleActivate = (ev) => {
+        if (ev.type === "click" || (ev.type === "keydown" && (ev.key === "Enter" || ev.key === " "))) {
+          ev.preventDefault();
+          onClick(book);
+        }
+      };
+
+      card.addEventListener("click", handleActivate);
+      card.addEventListener("keydown", handleActivate);
+
+      return card;
+    }
+
+    function openModal(book) {
+      const backdrop = document.getElementById("modalBackdrop");
+      const modalTitle = document.getElementById("modalTitle");
+      const modalAuthor = document.getElementById("modalAuthor");
+      const modalPublisherChip = document.getElementById("modalPublisherChip");
+      const modalYearChip = document.getElementById("modalYearChip");
+      const modalCover = document.getElementById("modalCover");
+      const modalIsbn = document.getElementById("modalIsbn");
+
+      const fieldTitle = document.getElementById("fieldTitle");
+      const fieldAuthor = document.getElementById("fieldAuthor");
+      const fieldPublisher = document.getElementById("fieldPublisher");
+      const fieldYear = document.getElementById("fieldYear");
+      const fieldDescription = document.getElementById("fieldDescription");
+      const linksContainer = document.getElementById("modalLinks");
+
+      modalTitle.textContent = book.title;
+      modalAuthor.textContent = book.author || "";
+
+      if (book.publisher) {
+        modalPublisherChip.style.display = "";
+        modalPublisherChip.textContent = "出版社: " + book.publisher;
+      } else {
+        modalPublisherChip.style.display = "none";
+      }
+
+      if (book.year) {
+        modalYearChip.style.display = "";
+        modalYearChip.textContent = "出版年: " + book.year;
+      } else {
+        modalYearChip.style.display = "none";
+      }
+
+      modalCover.innerHTML = "";
+      if (book.cover) {
+        const img = document.createElement("img");
+        img.src = book.cover;
+        img.alt = book.title + " の表紙画像";
+        modalCover.appendChild(img);
+      } else {
+        const ph = document.createElement("div");
+        ph.className = "modal-cover-placeholder";
+        ph.textContent = pickInitials(book.title);
+        modalCover.appendChild(ph);
+      }
+
+      modalIsbn.textContent = book.isbn ? "ISBN: " + book.isbn : "ISBN情報なし";
+
+      fieldTitle.textContent = book.title;
+      fieldAuthor.textContent = book.author || "―";
+      fieldPublisher.textContent = book.publisher || "―";
+      fieldYear.textContent = book.year || "―";
+      fieldDescription.textContent = book.description || "この本の説明はまだ登録されていません。";
+
+      linksContainer.innerHTML = "";
+      if (book.isbn) {
+        const ndlUrl =
+          "https://ndlsearch.ndl.go.jp/books?searchMode=1&target=title&cs=bib&advanced=false&isbn=" +
+          encodeURIComponent(book.isbn);
+        const ndlLink = document.createElement("a");
+        ndlLink.href = ndlUrl;
+        ndlLink.target = "_blank";
+        ndlLink.rel = "noreferrer";
+        ndlLink.className = "modal-link";
+        ndlLink.innerHTML = '<span class="icon">🏛</span><span>国立国会図書館サーチ</span>';
+        linksContainer.appendChild(ndlLink);
+
+        const amazonUrl = "https://www.amazon.co.jp/s?k=" + encodeURIComponent(book.isbn);
+        const amzLink = document.createElement("a");
+        amzLink.href = amazonUrl;
+        amzLink.target = "_blank";
+        amzLink.rel = "noreferrer";
+        amzLink.className = "modal-link";
+        amzLink.innerHTML = '<span class="icon">🛒</span><span>Amazonで検索</span>';
+        linksContainer.appendChild(amzLink);
+      }
+
+      backdrop.classList.add("visible");
+      backdrop.setAttribute("aria-hidden", "false");
+
+      const closeBtn = document.getElementById("modalCloseBtn");
+      closeBtn.focus();
+    }
+
+    function closeModal() {
+      const backdrop = document.getElementById("modalBackdrop");
+      backdrop.classList.remove("visible");
+      backdrop.setAttribute("aria-hidden", "true");
+    }
+
+    async function init() {
+      const searchInput = document.getElementById("searchInput");
+      const clearSearch = document.getElementById("clearSearch");
+      const sortSelect = document.getElementById("sortSelect");
+      const reloadBtn = document.getElementById("reloadBtn");
+      const gridContainer = document.getElementById("gridContainer");
+      const emptyState = document.getElementById("emptyState");
+      const countBadge = document.getElementById("countBadge");
+      const statusText = document.getElementById("statusText");
+      const summaryText = document.getElementById("summaryText");
+
+      const backdrop = document.getElementById("modalBackdrop");
+      const closeBtn = document.getElementById("modalCloseBtn");
+
+      let allBooks = [];
+      let currentKeyword = "";
+      let currentSort = sortSelect.value;
+
+      const render = () => {
+        const list = applyFiltersAndSort(allBooks, currentKeyword, currentSort);
+        countBadge.textContent = list.length + "冊";
+
+        gridContainer.innerHTML = "";
+        if (list.length === 0) {
+          gridContainer.appendChild(emptyState);
+          emptyState.style.display = "block";
+        } else {
+          emptyState.style.display = "none";
+          const grid = document.createElement("div");
+          grid.className = "book-grid";
+          list.forEach((b) => {
+            grid.appendChild(
+              createBookCard(b, (book) => {
+                openModal(book);
+              })
+            );
+          });
+          gridContainer.appendChild(grid);
+        }
+
+        if (allBooks.length === 0) {
+          summaryText.textContent = "登録図書: 0冊";
+        } else {
+          const years = allBooks
+            .map((b) => Number(b.year) || 0)
+            .filter((y) => y > 0);
+          const minY = years.length ? Math.min(...years) : null;
+          const maxY = years.length ? Math.max(...years) : null;
+          const rangeText =
+            minY && maxY && minY !== maxY ? minY + "〜" + maxY + "年頃" : maxY ? maxY + "年頃" : "刊行年情報少なめ";
+          summaryText.textContent = "登録: " + allBooks.length + "冊 / " + rangeText;
+        }
+      };
+
+      const loadData = async () => {
+        statusText.innerHTML =
+          '<span class="loader"><span class="loader-dot"></span><span class="loader-dot"></span><span class="loader-dot"></span>読込中…</span>';
+        try {
+          const listData = await fetchJson(booklistUrl);
+
+          const isbnList = Array.isArray(listData)
+            ? listData
+                .map((b) => String(b.isbn || b.ISBN || "").trim())
+                .filter(Boolean)
+            : [];
+
+          const openBdData = isbnList.length > 0 ? await fetchOpenBd(isbnList) : [];
+          allBooks = buildBookRecords(Array.isArray(listData) ? listData : [], openBdData);
+
+          statusText.textContent = "読込完了 (" + allBooks.length + "冊)";
+        } catch (err) {
+          console.error(err);
+          statusText.textContent = "読込エラー: " + err.message;
+          allBooks = [];
+        }
+        render();
+      };
+
+      searchInput.addEventListener("input", () => {
+        currentKeyword = searchInput.value.trim();
+        render();
+      });
+
+      clearSearch.addEventListener("click", () => {
+        searchInput.value = "";
+        currentKeyword = "";
+        render();
+        searchInput.focus();
+      });
+
+      sortSelect.addEventListener("change", () => {
+        currentSort = sortSelect.value;
+        render();
+      });
+
+      reloadBtn.addEventListener("click", () => {
+        loadData();
+      });
+
+      closeBtn.addEventListener("click", () => closeModal());
+
+      backdrop.addEventListener("click", (ev) => {
+        if (ev.target === backdrop) {
+          closeModal();
+        }
+      });
+
+      document.addEventListener("keydown", (ev) => {
+        if (ev.key === "Escape") {
+          closeModal();
+        }
+      });
+
+      await loadData();
+    }
+
+    window.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>

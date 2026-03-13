@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>図書登録 - 図書紹介</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f172a;
+      --bg-soft: #1e293b;
+      --card: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.15);
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --border: #1f2937;
+      --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.7);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: var(--text);
+      background: radial-gradient(circle at top, #1d283a 0, #020617 55%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 32px 16px 40px;
+    }
+
+    .app-frame {
+      width: 100%;
+      max-width: 720px;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.96), #020617);
+      border-radius: 28px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      box-shadow: var(--shadow-soft);
+      padding: 24px 22px 26px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .app-frame::before {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background:
+        radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.2), transparent 55%),
+        radial-gradient(circle at 100% 20%, rgba(129, 140, 248, 0.22), transparent 55%);
+      opacity: 0.6;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 2px 6px 10px;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: clamp(1.2rem, 1.1rem + 0.4vw, 1.45rem);
+      margin: 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35em;
+    }
+
+    h1 span.accent {
+      background: linear-gradient(120deg, #38bdf8, #a855f7);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-weight: 700;
+    }
+
+    .back-link {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    .section {
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 0.95rem;
+      color: var(--muted);
+      margin: 0 0 10px 0;
+      font-weight: 600;
+    }
+
+    #viewport-container {
+      position: relative;
+      width: 100%;
+      max-width: 400px;
+      aspect-ratio: 4 / 3;
+      margin: 0 auto 12px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 2px solid var(--border);
+      background: #000;
+    }
+
+    #viewport-container video,
+    #viewport-container canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    #viewport-container .scan-guide {
+      position: absolute;
+      top: 30%;
+      left: 10%;
+      width: 80%;
+      height: 40%;
+      border: 2px solid rgba(56, 189, 248, 0.7);
+      border-radius: 8px;
+      pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.4);
+      z-index: 2;
+      box-sizing: border-box;
+    }
+
+    #viewport-container .scan-guide::after {
+      content: "バーコードをこの枠に合わせてください";
+      position: absolute;
+      bottom: -26px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    .camera-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .camera-tip {
+      font-size: 0.8rem;
+      color: var(--muted);
+      margin: 0 0 16px 0;
+      line-height: 1.4;
+    }
+
+    .btn {
+      padding: 10px 18px;
+      border-radius: 12px;
+      border: 1px solid rgba(148, 163, 184, 0.5);
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+    .btn:hover { background: rgba(56, 189, 248, 0.25); }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .manual-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .manual-row input {
+      flex: 1;
+      min-width: 180px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-soft);
+      color: var(--text);
+      font-size: 1rem;
+    }
+    .manual-row input::placeholder { color: var(--muted); }
+
+    .status-msg {
+      font-size: 0.9rem;
+      color: var(--muted);
+      margin-top: 8px;
+      min-height: 1.4em;
+    }
+    .status-msg.success { color: #4ade80; }
+    .status-msg.error { color: #f87171; }
+
+    .book-preview {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      margin-bottom: 12px;
+      align-items: flex-start;
+    }
+
+    .book-preview-cover {
+      width: 80px;
+      height: 110px;
+      border-radius: 8px;
+      object-fit: cover;
+      background: var(--bg-soft);
+      flex-shrink: 0;
+    }
+
+    .book-preview-cover.placeholder {
+      object-fit: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .book-preview-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .book-preview-info h3 {
+      margin: 0 0 6px 0;
+      font-size: 1rem;
+      line-height: 1.3;
+    }
+
+    .book-preview-info p {
+      margin: 0;
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .json-area-wrap {
+      margin-top: 8px;
+    }
+
+    .json-area-wrap label {
+      display: block;
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+
+    textarea#paste-json {
+      width: 100%;
+      min-height: 180px;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-soft);
+      color: var(--text);
+      font-family: ui-monospace, "Cascadia Code", monospace;
+      font-size: 0.8rem;
+      line-height: 1.5;
+      resize: vertical;
+    }
+
+    .copy-row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-top: 10px;
+    }
+
+    .copy-row .hint {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    .loaded-list {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-frame">
+    <header>
+      <h1><span class="accent">図書登録</span></h1>
+      <a href="index.html" class="back-link">← 一覧へ戻る</a>
+    </header>
+
+    <section class="section">
+      <p class="section-title">1. カメラでISBNを読み取る</p>
+      <div id="viewport-container"></div>
+      <div class="camera-actions">
+        <button type="button" class="btn" id="btn-start">カメラ開始</button>
+        <button type="button" class="btn" id="btn-stop" disabled>カメラ停止</button>
+        <button type="button" class="btn" id="btn-capture" disabled>バーコードを読み取る</button>
+        <button type="button" class="btn" id="btn-ocr" disabled>ISBNの数字を読み取る</button>
+      </div>
+      <p class="status-msg" id="camera-status">カメラを開始して、バーコードまたは「ISBN」の数字が写るようにかざしてください。</p>
+      <p class="camera-tip">💡 バーコードは「バーコードを読み取る」で静止画を解析します。読めない場合は「ISBNの数字を読み取る」か下の入力欄をご利用ください。</p>
+    </section>
+
+    <section class="section">
+      <p class="section-title">2. または ISBN を手入力</p>
+      <div class="manual-row">
+        <input type="text" id="isbn-input" placeholder="ISBN（13桁または10桁）" inputmode="numeric" />
+        <button type="button" class="btn" id="btn-lookup">書籍情報を取得</button>
+      </div>
+      <p class="status-msg" id="lookup-status"></p>
+    </section>
+
+    <section class="section">
+      <p class="section-title">3. 登録した書籍と貼り付け用JSON</p>
+      <p class="loaded-list" id="loaded-list"></p>
+      <div id="preview-list"></div>
+      <div class="json-area-wrap">
+        <label for="paste-json">booklist.json に貼り付ける内容（既存＋新規をまとめたJSON）</label>
+        <textarea id="paste-json" readonly placeholder="書籍を1冊以上登録するとここにJSONが表示されます"></textarea>
+        <div class="copy-row">
+          <button type="button" class="btn" id="btn-copy">クリップボードにコピー</button>
+          <span class="hint" id="copy-hint"></span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="https://unpkg.com/@zxing/browser@0.1.5/umd/zxing-browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.12.1/dist/quagga.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script>
+    (function () {
+      "use strict";
+
+      const OPENBD_API = "https://api.openbd.jp/v1/get";
+      const OPEN_LIBRARY_DATA = "https://openlibrary.org/api/books";
+      const OPEN_LIBRARY_COVER = "https://covers.openlibrary.org/b/isbn/";
+
+      let bookList = [];
+      let lastDetectedIsbn = "";
+      let lastDetectedTime = 0;
+      const DETECT_DEBOUNCE_MS = 3000;
+
+      const btnStart = document.getElementById("btn-start");
+      const btnStop = document.getElementById("btn-stop");
+      const btnCapture = document.getElementById("btn-capture");
+      const btnOcr = document.getElementById("btn-ocr");
+      const cameraStatus = document.getElementById("camera-status");
+      const isbnInput = document.getElementById("isbn-input");
+      const btnLookup = document.getElementById("btn-lookup");
+      const lookupStatus = document.getElementById("lookup-status");
+      const previewList = document.getElementById("preview-list");
+      const pasteJson = document.getElementById("paste-json");
+      const btnCopy = document.getElementById("btn-copy");
+      const copyHint = document.getElementById("copy-hint");
+      const loadedListEl = document.getElementById("loaded-list");
+
+      function normalizeIsbn(raw) {
+        const digits = String(raw).replace(/\D/g, "");
+        if (digits.length === 10) return digits;
+        if (digits.length === 13) return digits;
+        return null;
+      }
+
+      function openLibraryCoverUrl(isbn) {
+        if (!isbn) return "";
+        return OPEN_LIBRARY_COVER + encodeURIComponent(isbn) + "-L.jpg";
+      }
+
+      function bookEntry(isbn, title, author, publisher, pubdate, cover) {
+        return {
+          isbn: isbn,
+          title: title || "（タイトル不明）",
+          author: author || "",
+          publisher: publisher || "",
+          pubdate: pubdate || "",
+          cover: cover || openLibraryCoverUrl(isbn)
+        };
+      }
+
+      function fetchOpenBd(isbn) {
+        var url = OPENBD_API + "?isbn=" + encodeURIComponent(isbn);
+        return fetch(url)
+          .then(function (r) { return r.json(); })
+          .then(function (arr) {
+            var item = arr && arr[0];
+            var s = item && item.summary;
+            if (!s) return null;
+            var author = (s.author || "").replace(/,/g, " ").trim();
+            var pubdate = s.pubdate || "";
+            if (pubdate.length === 6) {
+              pubdate = pubdate.slice(0, 4) + "-" + pubdate.slice(4, 6);
+            }
+            return bookEntry(
+              s.isbn || isbn,
+              s.title,
+              author,
+              s.publisher,
+              pubdate,
+              s.cover || ""
+            );
+          });
+      }
+
+      function fetchOpenLibrary(isbn) {
+        var key = "ISBN:" + isbn;
+        var url = OPEN_LIBRARY_DATA + "?bibkeys=" + encodeURIComponent(key) + "&format=json&jscmd=data";
+        return fetch(url)
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            var book = data[key];
+            if (!book) return null;
+            var authors = book.authors || [];
+            var authorName = authors.length ? authors[0].name : "";
+            var publishers = book.publishers || [];
+            var publisherName = publishers.length ? publishers[0].name : "";
+            var pubdate = book.publish_date || "";
+            return bookEntry(isbn, book.title, authorName, publisherName, pubdate, openLibraryCoverUrl(isbn));
+          });
+      }
+
+      function fetchBookByIsbn(isbn) {
+        return fetchOpenBd(isbn).then(function (entry) {
+          if (entry) return entry;
+          return fetchOpenLibrary(isbn);
+        });
+      }
+
+      function addBook(entry) {
+        const exists = bookList.some(function (b) { return b.isbn === entry.isbn; });
+        if (exists) return false;
+        bookList.push(entry);
+        return true;
+      }
+
+      function renderPreviewList() {
+        previewList.innerHTML = "";
+        bookList.forEach(function (book) {
+          const div = document.createElement("div");
+          div.className = "book-preview";
+          const img = document.createElement("img");
+          img.className = "book-preview-cover";
+          img.alt = book.title + " の表紙";
+          img.src = book.cover || "";
+          img.onerror = function () {
+            img.classList.add("placeholder");
+            img.removeAttribute("src");
+            img.alt = "";
+            img.textContent = "表紙なし";
+          };
+          const info = document.createElement("div");
+          info.className = "book-preview-info";
+          info.innerHTML = "<h3>" + escapeHtml(book.title) + "</h3>" +
+            "<p>" + escapeHtml(book.author || "—") + "</p>" +
+            "<p>ISBN: " + escapeHtml(book.isbn) + "</p>";
+          div.appendChild(img);
+          div.appendChild(info);
+          previewList.appendChild(div);
+        });
+      }
+
+      function escapeHtml(s) {
+        const div = document.createElement("div");
+        div.textContent = s;
+        return div.innerHTML;
+      }
+
+      function updatePasteJson() {
+        const json = JSON.stringify(bookList, null, 2);
+        pasteJson.value = json;
+        pasteJson.placeholder = bookList.length ? "" : "書籍を1冊以上登録するとここにJSONが表示されます";
+      }
+
+      function updateLoadedHint() {
+        if (loadedListEl) {
+          loadedListEl.textContent = bookList.length
+            ? "現在 " + bookList.length + " 冊（既存＋新規）。下のJSONを booklist.json に貼り付けて保存してください。"
+            : "既存の booklist.json を読み込むか、上で書籍を追加してください。";
+        }
+      }
+
+      function setLookupStatus(msg, isError) {
+        lookupStatus.textContent = msg;
+        lookupStatus.className = "status-msg" + (isError ? " error" : " success");
+      }
+
+      function setCameraStatus(msg) {
+        cameraStatus.textContent = msg;
+      }
+
+      function doLookup(isbn) {
+        const n = normalizeIsbn(isbn);
+        if (!n) {
+          setLookupStatus("ISBNは10桁または13桁の数字で入力してください。", true);
+          return;
+        }
+        setLookupStatus("取得中…", false);
+        fetchBookByIsbn(n)
+          .then(function (entry) {
+            if (!entry) {
+              setLookupStatus("このISBNの書籍情報が見つかりませんでした。", true);
+              return;
+            }
+            const added = addBook(entry);
+            setLookupStatus(added ? "登録しました：" + entry.title : "すでにリストに含まれています。", false);
+            renderPreviewList();
+            updatePasteJson();
+            updateLoadedHint();
+            if (added) isbnInput.value = "";
+          })
+          .catch(function (err) {
+            setLookupStatus("取得エラー: " + (err && err.message ? err.message : "不明"), true);
+          });
+      }
+
+      function onBarcodeDetected(code) {
+        const now = Date.now();
+        if (code === lastDetectedIsbn && (now - lastDetectedTime) < DETECT_DEBOUNCE_MS) return;
+        lastDetectedIsbn = code;
+        lastDetectedTime = now;
+
+        const n = normalizeIsbn(code);
+        if (!n) return;
+        isbnInput.value = n;
+        setCameraStatus("ISBN " + n + " を検出。書籍情報を取得中…");
+        fetchBookByIsbn(n)
+          .then(function (entry) {
+            if (!entry) {
+              setCameraStatus("このISBNの書籍情報が見つかりませんでした。");
+              return;
+            }
+            const added = addBook(entry);
+            setCameraStatus(added ? "登録しました：" + entry.title : "すでにリストにあります。");
+            renderPreviewList();
+            updatePasteJson();
+            updateLoadedHint();
+          })
+          .catch(function (err) {
+            setCameraStatus("取得エラー: " + (err && err.message ? err.message : "不明"));
+          });
+      }
+
+      function captureAndPreprocess(video) {
+        var w = video.videoWidth;
+        var h = video.videoHeight;
+        if (!w || !h) return null;
+        var scale = (w < 900) ? 2 : 1;
+        var canvas = document.createElement("canvas");
+        canvas.width = w * scale;
+        canvas.height = h * scale;
+        var ctx = canvas.getContext("2d");
+        ctx.filter = "contrast(1.5) brightness(1.08)";
+        ctx.drawImage(video, 0, 0, w, h, 0, 0, canvas.width, canvas.height);
+        ctx.filter = "none";
+        return canvas;
+      }
+
+      function centerCropCanvas(canvas, ratio) {
+        ratio = ratio != null ? ratio : 0.7;
+        var w = canvas.width;
+        var h = canvas.height;
+        var cw = Math.floor(w * ratio);
+        var ch = Math.floor(h * ratio);
+        var x = Math.floor((w - cw) / 2);
+        var y = Math.floor((h - ch) / 2);
+        var out = document.createElement("canvas");
+        out.width = cw;
+        out.height = ch;
+        var ctx = out.getContext("2d");
+        ctx.drawImage(canvas, x, y, cw, ch, 0, 0, cw, ch);
+        return out;
+      }
+
+      function preprocessForOcr(canvas) {
+        var w = canvas.width;
+        var h = canvas.height;
+        var scale = (w < 1000) ? 4 : (w < 1400) ? 3 : (w < 1800) ? 2 : 1;
+        var out = document.createElement("canvas");
+        out.width = w * scale;
+        out.height = h * scale;
+        var ctx = out.getContext("2d");
+        ctx.filter = "contrast(1.85) brightness(1.02) grayscale(1)";
+        ctx.drawImage(canvas, 0, 0, w, h, 0, 0, out.width, out.height);
+        ctx.filter = "none";
+        return out;
+      }
+
+      function binarizeCanvas(canvas, threshold) {
+        threshold = threshold != null ? threshold : 140;
+        var w = canvas.width;
+        var h = canvas.height;
+        var out = document.createElement("canvas");
+        out.width = w;
+        out.height = h;
+        var ctx = out.getContext("2d");
+        ctx.drawImage(canvas, 0, 0);
+        var imgData = ctx.getImageData(0, 0, w, h);
+        var d = imgData.data;
+        for (var i = 0; i < d.length; i += 4) {
+          var y = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+          var v = y >= threshold ? 255 : 0;
+          d[i] = d[i + 1] = d[i + 2] = v;
+        }
+        ctx.putImageData(imgData, 0, 0);
+        return out;
+      }
+
+      function invertCanvas(canvas) {
+        var w = canvas.width;
+        var h = canvas.height;
+        var out = document.createElement("canvas");
+        out.width = w;
+        out.height = h;
+        var ctx = out.getContext("2d");
+        ctx.drawImage(canvas, 0, 0);
+        var imgData = ctx.getImageData(0, 0, w, h);
+        var d = imgData.data;
+        for (var i = 0; i < d.length; i += 4) {
+          d[i] = 255 - d[i];
+          d[i + 1] = 255 - d[i + 1];
+          d[i + 2] = 255 - d[i + 2];
+        }
+        ctx.putImageData(imgData, 0, 0);
+        return out;
+      }
+
+      function isValidIsbn13(code) {
+        if (!code || code.length !== 13) return false;
+        var sum = 0;
+        for (var i = 0; i < 12; i++) sum += parseInt(code[i], 10) * (i % 2 === 0 ? 1 : 3);
+        var check = (10 - (sum % 10)) % 10;
+        return parseInt(code[12], 10) === check;
+      }
+
+      function isValidIsbn10(code) {
+        if (!code || code.length !== 10) return false;
+        var sum = 0;
+        for (var i = 0; i < 9; i++) sum += (10 - i) * parseInt(code[i], 10);
+        var check = (11 - (sum % 11)) % 11;
+        var last = code[9].toUpperCase();
+        return (check === 10 && last === "X") || parseInt(last, 10) === check;
+      }
+
+      function isValidIsbn(code) {
+        if (code.length === 13) return isValidIsbn13(code);
+        if (code.length === 10) return isValidIsbn10(code);
+        return false;
+      }
+
+      function tryZxingDecode(dataUrl, done) {
+        if (typeof ZXingBrowser === "undefined" || !ZXingBrowser.BrowserMultiFormatOneDReader) {
+          done(null);
+          return;
+        }
+        var reader = new ZXingBrowser.BrowserMultiFormatOneDReader();
+        reader.decodeFromImageUrl(dataUrl).then(
+          function (result) {
+            var text = (result && result.getText && result.getText()) || (result && result.text) || "";
+            var code = String(text).replace(/\D/g, "");
+            if (code.length === 10 || code.length === 13) done(code);
+            else done(null);
+          },
+          function () { done(null); }
+        );
+      }
+
+      function captureAndDecode() {
+        var container = document.querySelector("#viewport-container");
+        var video = container ? container.querySelector("video") : null;
+        if (!video || video.readyState < 2) {
+          setCameraStatus("映像を取得できません。少し待ってからもう一度押してください。");
+          return;
+        }
+        setCameraStatus("読み取り中…");
+        btnCapture.disabled = true;
+        var canvas = captureAndPreprocess(video);
+        if (!canvas) {
+          btnCapture.disabled = false;
+          setCameraStatus("映像を取得できません。");
+          return;
+        }
+        var dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+
+        function finishWithError() {
+          btnCapture.disabled = false;
+          setCameraStatus("バーコードが検出されませんでした。枠内に収めて再度押すか、「ISBNの数字を読み取る」・手入力をご利用ください。");
+        }
+
+        tryZxingDecode(dataUrl, function (code) {
+          if (code) {
+            btnCapture.disabled = false;
+            onBarcodeDetected(code);
+            return;
+          }
+          Quagga.decodeSingle({
+            decoder: { readers: ["ean_reader"] },
+            locate: true,
+            src: dataUrl
+          }, function (result) {
+            var codeResult = result && result.codeResult;
+            if (codeResult && codeResult.code) {
+              var q = String(codeResult.code).replace(/\D/g, "");
+              if (q.length === 10 || q.length === 13) {
+                btnCapture.disabled = false;
+                onBarcodeDetected(q);
+                return;
+              }
+            }
+            finishWithError();
+          });
+        });
+      }
+
+      function extractIsbnFromText(text) {
+        if (!text || !text.length) return null;
+        var normalized = text.replace(/[\s\-]/g, "").replace(/[^\dX]/gi, "");
+        var match = normalized.match(/97[89]\d{9}\d|\d{9}[\dX]/);
+        return match ? match[0] : null;
+      }
+
+      function pickBestIsbn(candidates) {
+        var valid = [];
+        for (var i = 0; i < candidates.length; i++) {
+          var c = candidates[i];
+          if (c && isValidIsbn(c)) valid.push(c);
+        }
+        if (valid.length === 0) return null;
+        var count = {};
+        for (var j = 0; j < valid.length; j++) {
+          var k = valid[j];
+          count[k] = (count[k] || 0) + 1;
+        }
+        var best = null;
+        var bestCount = 0;
+        for (var key in count) {
+          if (!count.hasOwnProperty(key)) continue;
+          var take = best === null ||
+            count[key] > bestCount ||
+            (count[key] === bestCount && key.length === 13 && best.length !== 13);
+          if (take) {
+            best = key;
+            bestCount = count[key];
+          }
+        }
+        return best;
+      }
+
+      function runOcrOnImage(worker, imageSource, options) {
+        return worker.recognize(imageSource, options).then(function (ret) {
+          return (ret && ret.data && ret.data.text) || "";
+        });
+      }
+
+      function captureAndReadOcr() {
+        var container = document.querySelector("#viewport-container");
+        var video = container ? container.querySelector("video") : null;
+        if (!video || video.readyState < 2) {
+          setCameraStatus("映像を取得できません。少し待ってからもう一度押してください。");
+          return;
+        }
+        setCameraStatus("数字を認識しています…（複数方式で読み取ります）");
+        btnOcr.disabled = true;
+        var baseCanvas = captureAndPreprocess(video);
+        if (!baseCanvas) {
+          btnOcr.disabled = false;
+          setCameraStatus("映像を取得できません。");
+          return;
+        }
+        var cropped = centerCropCanvas(baseCanvas, 0.72);
+        var ocrCanvas = preprocessForOcr(cropped);
+        var imageVariants = [
+          ocrCanvas.toDataURL("image/png"),
+          binarizeCanvas(ocrCanvas, 110).toDataURL("image/png"),
+          binarizeCanvas(ocrCanvas, 130).toDataURL("image/png"),
+          binarizeCanvas(ocrCanvas, 150).toDataURL("image/png"),
+          binarizeCanvas(ocrCanvas, 170).toDataURL("image/png"),
+          invertCanvas(binarizeCanvas(ocrCanvas, 140)).toDataURL("image/png")
+        ];
+        if (typeof Tesseract === "undefined") {
+          setCameraStatus("OCRライブラリの読み込みに失敗しました。");
+          btnOcr.disabled = false;
+          return;
+        }
+        var ocrOptions = {
+          tessedit_char_whitelist: "0123456789-X -",
+          tessedit_pageseg_mode: 7
+        };
+        Tesseract.createWorker("eng")
+          .then(function (worker) {
+            try {
+              if (worker.setParameters) worker.setParameters(ocrOptions);
+            } catch (e) {}
+            var chain = Promise.resolve([]);
+            for (var i = 0; i < imageVariants.length; i++) {
+              (function (idx) {
+                chain = chain.then(function (candidates) {
+                  return runOcrOnImage(worker, imageVariants[idx], ocrOptions).then(function (text) {
+                    var c = extractIsbnFromText(text);
+                    if (c) candidates.push(c);
+                    return candidates;
+                  });
+                });
+              })(i);
+            }
+            return chain.then(function (candidates) {
+              return worker.terminate().then(function () { return candidates; });
+            });
+          })
+          .then(function (candidates) {
+            btnOcr.disabled = false;
+            var isbn = pickBestIsbn(candidates);
+            if (isbn) {
+              onBarcodeDetected(isbn);
+              return;
+            }
+            if (candidates.length > 0) {
+              var count = {};
+              for (var i = 0; i < candidates.length; i++) {
+                var k = candidates[i];
+                count[k] = (count[k] || 0) + 1;
+              }
+              var fallback = null;
+              var maxC = 0;
+              for (var key in count) {
+                if (count[key] > maxC) { fallback = key; maxC = count[key]; }
+              }
+              isbnInput.value = fallback || candidates[0];
+              setCameraStatus("チェック桁が一致しませんでした。上記を確認・修正して「書籍情報を取得」を押してください。");
+            } else {
+              setCameraStatus("ISBNの数字が見つかりませんでした。明るく、ISBNが画面中央に大きく写るようにして再度お試しください。");
+            }
+          })
+          .catch(function (err) {
+            btnOcr.disabled = false;
+            setCameraStatus("読み取りエラー: " + (err && err.message ? err.message : "不明"));
+          });
+      }
+
+      function startCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setCameraStatus("このブラウザではカメラを利用できません。");
+          return;
+        }
+        const target = document.querySelector("#viewport-container");
+        if (!target) return;
+        Quagga.init({
+          inputStream: {
+            name: "Live",
+            type: "LiveStream",
+            target: target,
+            constraints: {
+              width: { min: 640, ideal: 1280 },
+              height: { min: 480, ideal: 720 },
+              facingMode: "environment"
+            }
+          },
+          locator: {
+            patchSize: "large",
+            halfSample: false
+          },
+          numOfWorkers: 4,
+          frequency: 20,
+          decoder: {
+            readers: ["ean_reader"],
+            multiple: false
+          },
+          locate: true
+        }, function (err) {
+          if (err) {
+            setCameraStatus("カメラの初期化に失敗しました: " + (err.message || err));
+            return;
+          }
+          Quagga.onDetected(function (result) {
+            var codeResult = result && result.codeResult;
+            if (!codeResult || !codeResult.code) return;
+            var code = String(codeResult.code).replace(/\D/g, "");
+            if (code.length !== 10 && code.length !== 13) return;
+            onBarcodeDetected(code);
+          });
+          Quagga.start();
+          var guide = target.querySelector(".scan-guide");
+          if (!guide) {
+            guide = document.createElement("div");
+            guide.className = "scan-guide";
+            guide.setAttribute("aria-hidden", "true");
+            target.appendChild(guide);
+          }
+          btnStart.disabled = true;
+          btnStop.disabled = false;
+          btnCapture.disabled = false;
+          btnOcr.disabled = false;
+          setCameraStatus("カメラ起動中。バーコードまたは「ISBN」の数字を枠に合わせて読み取るボタンを押してください。");
+        });
+      }
+
+      function stopCamera() {
+        Quagga.offDetected();
+        Quagga.stop();
+        btnStart.disabled = false;
+        btnStop.disabled = true;
+        btnCapture.disabled = true;
+        btnOcr.disabled = true;
+        setCameraStatus("カメラを停止しました。");
+      }
+
+      function loadExistingBooklist() {
+        fetch("booklist.json")
+          .then(function (r) {
+            if (!r.ok) throw new Error(r.status);
+            return r.json();
+          })
+          .then(function (arr) {
+            if (Array.isArray(arr)) {
+              bookList = arr.slice();
+              renderPreviewList();
+              updatePasteJson();
+              updateLoadedHint();
+              setLookupStatus("既存の booklist.json を読み込みました（" + bookList.length + " 冊）。", false);
+            }
+          })
+          .catch(function () {
+            updateLoadedHint();
+          });
+      }
+
+      btnStart.addEventListener("click", startCamera);
+      btnStop.addEventListener("click", stopCamera);
+      btnCapture.addEventListener("click", captureAndDecode);
+      btnOcr.addEventListener("click", captureAndReadOcr);
+      btnLookup.addEventListener("click", function () {
+        doLookup(isbnInput.value.trim());
+      });
+      isbnInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") doLookup(isbnInput.value.trim());
+      });
+      btnCopy.addEventListener("click", function () {
+        const text = pasteJson.value;
+        if (!text) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(
+            function () {
+              copyHint.textContent = "コピーしました。";
+              setTimeout(function () { copyHint.textContent = ""; }, 2000);
+            },
+            function () { copyHint.textContent = "コピーに失敗しました。"; }
+          );
+        } else {
+          pasteJson.select();
+          try {
+            document.execCommand("copy");
+            copyHint.textContent = "コピーしました。";
+            setTimeout(function () { copyHint.textContent = ""; }, 2000);
+          } catch (err) {
+            copyHint.textContent = "コピーに失敗しました。";
+          }
+        }
+      });
+
+      loadExistingBooklist();
+      updatePasteJson();
+      updateLoadedHint();
+    })();
+  </script>
+</body>
+</html>

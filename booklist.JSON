@@ -1,0 +1,23 @@
+[
+  {
+    "isbn": "9784048919832",
+    "title": "ハリー・ポッターと賢者の石",
+    "author": "J.K.ローリング",
+    "publisher": "KADOKAWA",
+    "pubdate": "1999"
+  },
+  {
+    "isbn": "9784101010137",
+    "title": "こころ",
+    "author": "夏目漱石",
+    "publisher": "新潮社",
+    "pubdate": "1952"
+  },
+  {
+    "isbn": "9784334030215",
+    "title": "君の膵臓をたべたい",
+    "author": "住野よる",
+    "publisher": "双葉社",
+    "pubdate": "2015"
+  }
+]
