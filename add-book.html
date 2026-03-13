@@ -352,10 +352,16 @@
       <p class="loaded-list" id="loaded-list"></p>
       <div id="preview-list"></div>
       <div class="json-area-wrap">
-        <label for="paste-json">booklist.json に貼り付ける内容（既存＋新規をまとめたJSON）</label>
+        <label for="paste-json">booklist.json に貼り付ける／保存する内容（既存＋新規をまとめたJSON）</label>
+        <div class="copy-row">
+          <input type="file" id="json-file-input" accept="application/json,.json" />
+          <button type="button" class="btn" id="btn-load-json">JSONファイルを読み込む</button>
+        </div>
         <textarea id="paste-json" readonly placeholder="書籍を1冊以上登録するとここにJSONが表示されます"></textarea>
         <div class="copy-row">
           <button type="button" class="btn" id="btn-copy">クリップボードにコピー</button>
+          <button type="button" class="btn" id="btn-export-json">JSONファイルを書き出す</button>
+          <button type="button" class="btn" id="btn-export-html">スタンドアロンHTMLを書き出す</button>
           <span class="hint" id="copy-hint"></span>
         </div>
       </div>
@@ -388,7 +394,11 @@
       const lookupStatus = document.getElementById("lookup-status");
       const previewList = document.getElementById("preview-list");
       const pasteJson = document.getElementById("paste-json");
+      const jsonFileInput = document.getElementById("json-file-input");
+      const btnLoadJson = document.getElementById("btn-load-json");
       const btnCopy = document.getElementById("btn-copy");
+      const btnExportJson = document.getElementById("btn-export-json");
+      const btnExportHtml = document.getElementById("btn-export-html");
       const copyHint = document.getElementById("copy-hint");
       const loadedListEl = document.getElementById("loaded-list");
 
@@ -511,7 +521,7 @@
       function updateLoadedHint() {
         if (loadedListEl) {
           loadedListEl.textContent = bookList.length
-            ? "現在 " + bookList.length + " 冊（既存＋新規）。下のJSONを booklist.json に貼り付けて保存してください。"
+            ? "現在 " + bookList.length + " 冊（既存＋新規）。下のJSONを booklist.json に保存するか、「JSONファイルを書き出す」で保存してください。"
             : "既存の booklist.json を読み込むか、上で書籍を追加してください。";
         }
       }
@@ -959,6 +969,17 @@
         setCameraStatus("カメラを停止しました。");
       }
 
+      function mergeBooklistFromArray(arr) {
+        if (!Array.isArray(arr)) return;
+        arr.forEach(function (entry) {
+          if (!entry || !entry.isbn) return;
+          const exists = bookList.some(function (b) { return b.isbn === entry.isbn; });
+          if (!exists) {
+            bookList.push(entry);
+          }
+        });
+      }
+
       function loadExistingBooklist() {
         fetch("booklist.json")
           .then(function (r) {
@@ -967,7 +988,7 @@
           })
           .then(function (arr) {
             if (Array.isArray(arr)) {
-              bookList = arr.slice();
+              mergeBooklistFromArray(arr);
               renderPreviewList();
               updatePasteJson();
               updateLoadedHint();
@@ -1010,6 +1031,118 @@
             copyHint.textContent = "コピーに失敗しました。";
           }
         }
+      });
+
+      btnLoadJson.addEventListener("click", function () {
+        if (jsonFileInput) jsonFileInput.click();
+      });
+
+      if (jsonFileInput) {
+        jsonFileInput.addEventListener("change", function () {
+          var file = jsonFileInput.files && jsonFileInput.files[0];
+          if (!file) return;
+          var reader = new FileReader();
+          reader.onload = function (e) {
+            try {
+              var arr = JSON.parse(e.target.result);
+              var before = bookList.length;
+              mergeBooklistFromArray(arr);
+              var added = bookList.length - before;
+              renderPreviewList();
+              updatePasteJson();
+              updateLoadedHint();
+              setLookupStatus("JSONファイルを読み込みました（新規 " + added + " 冊を追加、合計 " + bookList.length + " 冊）。", false);
+            } catch (err) {
+              setLookupStatus("JSONファイルの読み込みに失敗しました。形式を確認してください。", true);
+            } finally {
+              jsonFileInput.value = "";
+            }
+          };
+          reader.readAsText(file, "utf-8");
+        });
+      }
+
+      btnExportJson.addEventListener("click", function () {
+        if (!bookList.length) {
+          copyHint.textContent = "書籍が1冊も登録されていません。先にISBNを追加してください。";
+          setTimeout(function () { copyHint.textContent = ""; }, 2000);
+          return;
+        }
+        var jsonText = JSON.stringify(bookList, null, 2);
+        var blob = new Blob([jsonText], { type: "application/json;charset=utf-8" });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        var dt = new Date();
+        var y = dt.getFullYear();
+        var m = ("0" + (dt.getMonth() + 1)).slice(-2);
+        var d = ("0" + dt.getDate()).slice(-2);
+        a.download = "booklist-" + y + m + d + ".json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        copyHint.textContent = "JSONファイルをダウンロードしました。";
+        setTimeout(function () { copyHint.textContent = ""; }, 4000);
+      });
+
+      function buildStandaloneHtml(bookArray) {
+        // index.html をテンプレートとして取得し、埋め込みJSONを書き込む
+        return fetch("index.html")
+          .then(function (r) {
+            if (!r.ok) throw new Error("index.html を取得できませんでした (" + r.status + ")");
+            return r.text();
+          })
+          .then(function (html) {
+            var marker = '<script id="embedded-booklist" type="application/json">';
+            var idx = html.indexOf(marker);
+            if (idx === -1) {
+              throw new Error("テンプレート内に embedded-booklist スクリプトが見つかりません。");
+            }
+            var closeIdx = html.indexOf("</script>", idx);
+            if (closeIdx === -1) {
+              throw new Error("テンプレート内の embedded-booklist スクリプトが正しく閉じられていません。");
+            }
+            // </script> の直前にJSON文字列を書き込む
+            var jsonText = JSON.stringify(bookArray, null, 2)
+              .replace(/</g, "\\u003c"); // </script> 誤認識回避
+
+            var before = html.slice(0, idx + marker.length);
+            var after = html.slice(closeIdx);
+            return before + "\n" + jsonText + "\n" + after;
+          });
+      }
+
+      btnExportHtml.addEventListener("click", function () {
+        if (!bookList.length) {
+          copyHint.textContent = "書籍が1冊も登録されていません。先にISBNを追加してください。";
+          setTimeout(function () { copyHint.textContent = ""; }, 2000);
+          return;
+        }
+        copyHint.textContent = "HTML を生成中です…";
+        buildStandaloneHtml(bookList)
+          .then(function (htmlText) {
+            var blob = new Blob([htmlText], { type: "text/html;charset=utf-8" });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement("a");
+            a.href = url;
+            var dt = new Date();
+            var y = dt.getFullYear();
+            var m = ("0" + (dt.getMonth() + 1)).slice(-2);
+            var d = ("0" + dt.getDate()).slice(-2);
+            a.download = "booklist-standalone-" + y + m + d + ".html";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            copyHint.textContent = "スタンドアロンHTMLをダウンロードしました。";
+            setTimeout(function () { copyHint.textContent = ""; }, 4000);
+          })
+          .catch(function (err) {
+            console.error(err);
+            copyHint.textContent = "HTML生成に失敗しました: " + (err && err.message ? err.message : "不明");
+            setTimeout(function () { copyHint.textContent = ""; }, 4000);
+          });
       });
 
       window.addEventListener("resize", updateViewportLayout);
