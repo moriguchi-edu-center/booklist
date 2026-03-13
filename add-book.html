@@ -900,8 +900,12 @@
       }
 
       function startCamera() {
+        if (typeof Quagga === "undefined") {
+          setCameraStatus("バーコード読み取り用ライブラリ（Quagga）が読み込めませんでした。ネットワーク接続や通信制限を確認してください。");
+          return;
+        }
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          setCameraStatus("このブラウザではカメラを利用できません。");
+          setCameraStatus("このブラウザではカメラを利用できません（HTTPSで開いているか確認してください）。");
           return;
         }
         const target = document.querySelector("#viewport-container");
@@ -933,6 +937,7 @@
           locate: true
         }, function (err) {
           if (err) {
+            console.error(err);
             setCameraStatus("カメラの初期化に失敗しました: " + (err.message || err));
             return;
           }

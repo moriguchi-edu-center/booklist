@@ -1093,8 +1093,11 @@
     </div>
   </div>
 
+  <!-- 埋め込み用 booklist（スタンドアロンHTML出力時にここへJSONを入れる） -->
+  <script id="embedded-booklist" type="application/json"></script>
+
   <script>
-    const booklistUrl = "booklist.json"; // 同じフォルダに配置
+    const booklistUrl = "booklist.json"; // 通常は同じフォルダのJSONを読み込む
 
     function normalizeText(text) {
       if (!text) return "";
@@ -1128,6 +1131,22 @@
         throw new Error("HTTP " + res.status + " " + res.statusText);
       }
       return res.json();
+    }
+
+    // index.html 単体で動かすために、埋め込みJSONがあればそれを優先して使う
+    async function loadBooklistData() {
+      const embeddedEl = document.getElementById("embedded-booklist");
+      if (embeddedEl) {
+        const txt = embeddedEl.textContent.trim();
+        if (txt) {
+          try {
+            return JSON.parse(txt);
+          } catch (e) {
+            console.warn("埋め込みJSONの解析に失敗しました。booklist.json から読み込みます。", e);
+          }
+        }
+      }
+      return fetchJson(booklistUrl);
     }
 
     async function fetchOpenBd(isbnList) {
@@ -1476,7 +1495,7 @@
         statusText.innerHTML =
           '<span class="loader"><span class="loader-dot"></span><span class="loader-dot"></span><span class="loader-dot"></span>読込中…</span>';
         try {
-          const listData = await fetchJson(booklistUrl);
+          const listData = await loadBooklistData();
 
           const isbnList = Array.isArray(listData)
             ? listData
