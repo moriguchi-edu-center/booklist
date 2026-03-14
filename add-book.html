@@ -153,12 +153,12 @@
       height: 40%;
     }
 
-    /* 縦向きタブレット：枠を中央に固定し、映像の中央と一致させる */
+    /* 縦向きタブレット：横長の長方形（バーコード向け）で枠を大きく */
     #viewport-container.portrait .scan-guide {
-      top: 25%;
-      left: 25%;
-      width: 50%;
-      height: 50%;
+      top: 35%;
+      left: 10%;
+      width: 80%;
+      height: 30%;
     }
 
     #viewport-container .scan-guide::after {
@@ -770,7 +770,9 @@
           setCameraStatus("映像を取得できません。");
           return;
         }
-        var dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        /* 枠の中央部分だけを使い、周辺の不要な部分を落として精度を上げる */
+        var cropped = centerCropCanvas(canvas, 0.7);
+        var dataUrl = cropped.toDataURL("image/jpeg", 0.92);
 
         function finishWithError() {
           btnCapture.disabled = false;
@@ -857,7 +859,8 @@
           setCameraStatus("映像を取得できません。");
           return;
         }
-        var cropped = centerCropCanvas(baseCanvas, 0.72);
+        /* 枠の中央部分だけをOCRし、周辺の不要な部分を落として精度を上げる */
+        var cropped = centerCropCanvas(baseCanvas, 0.7);
         var ocrCanvas = preprocessForOcr(cropped);
         var imageVariants = [
           ocrCanvas.toDataURL("image/png"),
