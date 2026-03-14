@@ -113,16 +113,18 @@
       background: #000;
     }
 
-    /* 端末の向きに応じてアスペクト比を変更できるようにする */
+    /* 端末の向きに応じてアスペクト比を変更（タブレット縦向きでカメラと枠を合わせる） */
     #viewport-container.portrait {
       aspect-ratio: 3 / 4;
-      max-width: 360px;
+      max-width: 340px;
+      max-height: min(56vh, 520px);
     }
 
     #viewport-container.landscape {
       aspect-ratio: 4 / 3;
     }
 
+    /* カメラ映像は常にコンテナを塗りつぶし（縦向きでも中央が読み取り範囲になるよう cover） */
     #viewport-container video,
     #viewport-container canvas {
       position: absolute;
@@ -132,8 +134,10 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
+      object-position: center center;
     }
 
+    /* 読み取り枠：横長画面では横長の枠（バーコード向け） */
     #viewport-container .scan-guide {
       position: absolute;
       border: 2px solid rgba(56, 189, 248, 0.7);
@@ -143,19 +147,18 @@
       z-index: 2;
       box-sizing: border-box;
 
-      /* デフォルト（PC や横長画面）: 横向きバーコード向けの枠 */
       top: 30%;
       left: 10%;
       width: 80%;
       height: 40%;
     }
 
-    /* 縦持ちタブレットなど、縦長画面のときは縦長の枠にする */
+    /* 縦向きタブレット：枠を中央に固定し、映像の中央と一致させる */
     #viewport-container.portrait .scan-guide {
-      top: 20%;
-      left: 20%;
-      width: 60%;
-      height: 60%;
+      top: 25%;
+      left: 25%;
+      width: 50%;
+      height: 50%;
     }
 
     #viewport-container .scan-guide::after {
@@ -167,6 +170,24 @@
       text-align: center;
       font-size: 0.75rem;
       color: var(--muted);
+    }
+
+    /* 縦向きではラベルがはみ出さないよう枠の下に収める */
+    #viewport-container.portrait .scan-guide::after {
+      bottom: -22px;
+      font-size: 0.7rem;
+    }
+
+    /* タブレット縦向きでカメラが横長ストリームのとき：映像を90度回転して枠と一致させる */
+    #viewport-container.portrait.video-rotate-90 video,
+    #viewport-container.portrait.video-rotate-90 canvas {
+      width: 133%;
+      height: 75%;
+      left: -16.5%;
+      top: -12.5%;
+      object-fit: cover;
+      object-position: center center;
+      transform: rotate(90deg);
     }
 
     .camera-actions {
@@ -377,6 +398,7 @@
       const OPENBD_API = "https://api.openbd.jp/v1/get";
       const OPEN_LIBRARY_DATA = "https://openlibrary.org/api/books";
       const OPEN_LIBRARY_COVER = "https://covers.openlibrary.org/b/isbn/";
+      const NDL_THUMBNAIL_BASE = "https://ndlsearch.ndl.go.jp/thumbnail/";
 
       let bookList = [];
       let lastDetectedIsbn = "";
@@ -407,19 +429,38 @@
         return null;
       }
 
+      function normalizeIsbnTo13(isbn) {
+        const digits = String(isbn || "").replace(/\D/g, "");
+        if (digits.length === 13) return digits;
+        if (digits.length !== 10) return "";
+        const twelve = "978" + digits.slice(0, 9);
+        var sum = 0;
+        for (var i = 0; i < 12; i++) sum += (parseInt(twelve[i], 10) * (i % 2 === 0 ? 1 : 3));
+        var check = (10 - (sum % 10)) % 10;
+        return twelve + String(check);
+      }
+
+      function ndlCoverUrl(isbn) {
+        var isbn13 = normalizeIsbnTo13(isbn);
+        return isbn13 ? NDL_THUMBNAIL_BASE + isbn13 + ".jpg" : "";
+      }
+
       function openLibraryCoverUrl(isbn) {
         if (!isbn) return "";
         return OPEN_LIBRARY_COVER + encodeURIComponent(isbn) + "-L.jpg";
       }
 
-      function bookEntry(isbn, title, author, publisher, pubdate, cover) {
+      function bookEntry(isbn, title, author, publisher, pubdate, coverFromApi) {
+        var ndlCover = isbn ? ndlCoverUrl(isbn) : "";
+        var fallback = coverFromApi || (isbn ? openLibraryCoverUrl(isbn) : "");
         return {
           isbn: isbn,
           title: title || "（タイトル不明）",
           author: author || "",
           publisher: publisher || "",
           pubdate: pubdate || "",
-          cover: cover || openLibraryCoverUrl(isbn)
+          cover: ndlCover || fallback,
+          coverFallback: ndlCover ? fallback : ""
         };
       }
 
@@ -488,6 +529,11 @@
           img.alt = book.title + " の表紙";
           img.src = book.cover || "";
           img.onerror = function () {
+            if (book.coverFallback) {
+              img.onerror = null;
+              img.src = book.coverFallback;
+              return;
+            }
             img.classList.add("placeholder");
             img.removeAttribute("src");
             img.alt = "";
@@ -885,13 +931,14 @@
         var container = document.querySelector("#viewport-container");
         if (!container) return;
 
-        container.classList.remove("portrait", "landscape");
+        container.classList.remove("portrait", "landscape", "video-rotate-90");
 
         var vw = window.innerWidth || document.documentElement.clientWidth;
         var vh = window.innerHeight || document.documentElement.clientHeight;
 
         if (vh > vw) {
           container.classList.add("portrait");
+          applyVideoRotationForPortrait(container);
         } else {
           container.classList.add("landscape");
         }
@@ -954,12 +1001,33 @@
             guide.setAttribute("aria-hidden", "true");
             target.appendChild(guide);
           }
+          applyVideoRotationForPortrait(target);
           btnStart.disabled = true;
           btnStop.disabled = false;
           btnCapture.disabled = false;
           btnOcr.disabled = false;
           setCameraStatus("カメラ起動中。バーコードまたは「ISBN」の数字を枠に合わせて読み取るボタンを押してください。");
         });
+      }
+
+      function applyVideoRotationForPortrait(container) {
+        if (!container || !container.classList.contains("portrait")) return;
+        var video = container.querySelector("video");
+        if (!video) {
+          setTimeout(function () { applyVideoRotationForPortrait(container); }, 200);
+          return;
+        }
+        function check() {
+          var w = video.videoWidth;
+          var h = video.videoHeight;
+          if (w && h && w > h) {
+            container.classList.add("video-rotate-90");
+          } else {
+            container.classList.remove("video-rotate-90");
+          }
+        }
+        if (video.readyState >= 2) check();
+        else video.addEventListener("loadedmetadata", check);
       }
 
       function stopCamera() {

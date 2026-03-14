@@ -1159,6 +1159,29 @@
       return res.json();
     }
 
+    // 国立国会図書館 書影API（ISBNは13桁・ハイフンなし）
+    const NDL_THUMBNAIL_BASE = "https://ndlsearch.ndl.go.jp/thumbnail/";
+    function normalizeIsbnTo13(isbn) {
+      const digits = String(isbn || "").replace(/\D/g, "");
+      if (digits.length === 13) return digits;
+      if (digits.length !== 10) return "";
+      const twelve = "978" + digits.slice(0, 9);
+      let sum = 0;
+      for (let i = 0; i < 12; i++) sum += (parseInt(twelve[i], 10) * (i % 2 === 0 ? 1 : 3));
+      const check = (10 - (sum % 10)) % 10;
+      return twelve + String(check);
+    }
+    function ndlCoverUrl(isbn) {
+      const isbn13 = normalizeIsbnTo13(isbn);
+      return isbn13 ? NDL_THUMBNAIL_BASE + isbn13 + ".jpg" : "";
+    }
+    // 書影がない場合のフォールバック（Open Library 大サイズ）
+    const OPEN_LIBRARY_COVER = "https://covers.openlibrary.org/b/isbn/";
+    function openLibraryCoverUrl(isbn) {
+      if (!isbn) return "";
+      return OPEN_LIBRARY_COVER + encodeURIComponent(isbn) + "-L.jpg";
+    }
+
     function buildBookRecords(listData, openBdData) {
       const map = new Map();
       if (Array.isArray(openBdData)) {
@@ -1193,6 +1216,9 @@
         const year = yearFromDateText(pubdate);
         const isRecent = year && Number(year) >= nowYear - 1;
 
+        const coverFromApi = base.cover || (ext && ext.cover) || "";
+        const ndlCover = isbn ? ndlCoverUrl(isbn) : "";
+        const fallbackCover = coverFromApi || (isbn ? openLibraryCoverUrl(isbn) : "");
         return {
           id: index,
           isbn,
@@ -1202,7 +1228,8 @@
           pubdate,
           year,
           isRecent,
-          cover: base.cover || (ext && ext.cover) || "",
+          cover: ndlCover || fallbackCover,
+          coverFallback: ndlCover ? fallbackCover : "",
           description,
           raw: base,
         };
@@ -1276,6 +1303,11 @@
         img.alt = book.title + " の表紙画像";
         img.loading = "lazy";
         img.onerror = () => {
+          if (book.coverFallback) {
+            img.onerror = null;
+            img.src = book.coverFallback;
+            return;
+          }
           img.remove();
           const ph = document.createElement("div");
           ph.className = "book-placeholder-initials";
@@ -1385,6 +1417,18 @@
         const img = document.createElement("img");
         img.src = book.cover;
         img.alt = book.title + " の表紙画像";
+        img.onerror = () => {
+          if (book.coverFallback) {
+            img.onerror = null;
+            img.src = book.coverFallback;
+            return;
+          }
+          img.remove();
+          const ph = document.createElement("div");
+          ph.className = "modal-cover-placeholder";
+          ph.textContent = pickInitials(book.title);
+          modalCover.appendChild(ph);
+        };
         modalCover.appendChild(img);
       } else {
         const ph = document.createElement("div");
