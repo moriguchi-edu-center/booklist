@@ -195,8 +195,20 @@
       gap: 10px;
       flex-wrap: wrap;
       justify-content: center;
+      align-items: center;
       margin-bottom: 8px;
     }
+
+    .auto-scan-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .auto-scan-label input { cursor: pointer; }
 
     .camera-tip {
       font-size: 0.8rem;
@@ -354,9 +366,13 @@
         <button type="button" class="btn" id="btn-stop" disabled>カメラ停止</button>
         <button type="button" class="btn" id="btn-capture" disabled>バーコードを読み取る</button>
         <button type="button" class="btn" id="btn-ocr" disabled>ISBNの数字を読み取る</button>
+        <label class="auto-scan-label">
+          <input type="checkbox" id="auto-scan" />
+          <span>自動読み取り</span>
+        </label>
       </div>
       <p class="status-msg" id="camera-status">カメラを開始して、バーコードまたは「ISBN」の数字が写るようにかざしてください。</p>
-      <p class="camera-tip">💡 バーコードは「バーコードを読み取る」で静止画を解析します。読めない場合は「ISBNの数字を読み取る」か下の入力欄をご利用ください。</p>
+      <p class="camera-tip">💡 自動読み取りONにすると、枠内のバーコードを検出すると自動で書籍を登録・表示します。手動の場合は「バーコードを読み取る」または「ISBNの数字を読み取る」を押してください。</p>
     </section>
 
     <section class="section">
@@ -404,6 +420,9 @@
       let lastDetectedIsbn = "";
       let lastDetectedTime = 0;
       const DETECT_DEBOUNCE_MS = 3000;
+      let autoScanIntervalId = null;
+      let autoScanInProgress = false;
+      const AUTO_SCAN_INTERVAL_MS = 1800;
 
       const btnStart = document.getElementById("btn-start");
       const btnStop = document.getElementById("btn-stop");
@@ -421,6 +440,7 @@
       const btnExportJson = document.getElementById("btn-export-json");
       const copyHint = document.getElementById("copy-hint");
       const loadedListEl = document.getElementById("loaded-list");
+      const autoScanCheckbox = document.getElementById("auto-scan");
 
       function normalizeIsbn(raw) {
         const digits = String(raw).replace(/\D/g, "");
@@ -662,6 +682,62 @@
         return out;
       }
 
+      /* 読み取り枠（scan-guide）のCSS位置に対応する canvas 上の矩形を返す。枠の内側だけを解析するため */
+      function getGuideCropRect(container, canvas) {
+        var rect = container.getBoundingClientRect();
+        var Wc = rect.width;
+        var Hc = rect.height;
+        if (!Wc || !Hc) return null;
+        var Cw = canvas.width;
+        var Ch = canvas.height;
+        var isPortrait = container.classList.contains("portrait");
+        var leftPct = 0.1, topPct, wPct = 0.8, hPct;
+        if (isPortrait) {
+          topPct = 0.35;
+          hPct = 0.3;
+        } else {
+          topPct = 0.3;
+          hPct = 0.4;
+        }
+        var visibleW = Math.min(Cw, Ch * Wc / Hc);
+        var visibleH = Math.min(Ch, Cw * Hc / Wc);
+        var visibleLeft = (Cw - visibleW) / 2;
+        var visibleTop = (Ch - visibleH) / 2;
+        var x = Math.max(0, Math.floor(visibleLeft + leftPct * visibleW));
+        var y = Math.max(0, Math.floor(visibleTop + topPct * visibleH));
+        var w = Math.max(1, Math.min(Cw - x, Math.floor(wPct * visibleW)));
+        var h = Math.max(1, Math.min(Ch - y, Math.floor(hPct * visibleH)));
+        return { x: x, y: y, width: w, height: h };
+      }
+
+      function cropCanvasToRect(canvas, rect) {
+        var out = document.createElement("canvas");
+        out.width = rect.width;
+        out.height = rect.height;
+        var ctx = out.getContext("2d");
+        ctx.drawImage(canvas, rect.x, rect.y, rect.width, rect.height, 0, 0, rect.width, rect.height);
+        return out;
+      }
+
+      function rotateCanvas90(canvas, sign) {
+        var w = canvas.width;
+        var h = canvas.height;
+        var out = document.createElement("canvas");
+        out.width = h;
+        out.height = w;
+        var ctx = out.getContext("2d");
+        if (sign === -90) {
+          ctx.translate(0, w);
+          ctx.rotate(-Math.PI / 2);
+        } else {
+          ctx.translate(h, 0);
+          ctx.rotate(Math.PI / 2);
+        }
+        ctx.drawImage(canvas, 0, 0, w, h, 0, 0, w, h);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        return out;
+      }
+
       function preprocessForOcr(canvas) {
         var w = canvas.width;
         var h = canvas.height;
@@ -770,9 +846,16 @@
           setCameraStatus("映像を取得できません。");
           return;
         }
-        /* 枠の中央部分だけを使い、周辺の不要な部分を落として精度を上げる */
-        var cropped = centerCropCanvas(canvas, 0.7);
-        var dataUrl = cropped.toDataURL("image/jpeg", 0.92);
+        if (container.classList.contains("video-rotate-90")) {
+          canvas = rotateCanvas90(canvas, -90);
+        }
+        var guideRect = getGuideCropRect(container, canvas);
+        if (guideRect) {
+          canvas = cropCanvasToRect(canvas, guideRect);
+        } else {
+          canvas = centerCropCanvas(canvas, 0.7);
+        }
+        var dataUrl = canvas.toDataURL("image/jpeg", 0.92);
 
         function finishWithError() {
           btnCapture.disabled = false;
@@ -802,6 +885,66 @@
             finishWithError();
           });
         });
+      }
+
+      function tryAutoDecode() {
+        if (autoScanInProgress || !autoScanCheckbox || !autoScanCheckbox.checked) return;
+        var container = document.querySelector("#viewport-container");
+        var video = container ? container.querySelector("video") : null;
+        if (!video || video.readyState < 2) return;
+        autoScanInProgress = true;
+        var canvas = captureAndPreprocess(video);
+        if (!canvas) {
+          autoScanInProgress = false;
+          return;
+        }
+        if (container.classList.contains("video-rotate-90")) {
+          canvas = rotateCanvas90(canvas, -90);
+        }
+        var guideRect = getGuideCropRect(container, canvas);
+        if (guideRect) {
+          canvas = cropCanvasToRect(canvas, guideRect);
+        } else {
+          canvas = centerCropCanvas(canvas, 0.7);
+        }
+        var dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        function done() {
+          autoScanInProgress = false;
+        }
+        tryZxingDecode(dataUrl, function (code) {
+          if (code) {
+            onBarcodeDetected(code);
+            done();
+            return;
+          }
+          Quagga.decodeSingle({
+            decoder: { readers: ["ean_reader"] },
+            locate: true,
+            src: dataUrl
+          }, function (result) {
+            var codeResult = result && result.codeResult;
+            if (codeResult && codeResult.code) {
+              var q = String(codeResult.code).replace(/\D/g, "");
+              if (q.length === 10 || q.length === 13) {
+                onBarcodeDetected(q);
+              }
+            }
+            done();
+          });
+        });
+      }
+
+      function startAutoScan() {
+        stopAutoScan();
+        if (!autoScanCheckbox || !autoScanCheckbox.checked) return;
+        autoScanIntervalId = setInterval(tryAutoDecode, AUTO_SCAN_INTERVAL_MS);
+      }
+
+      function stopAutoScan() {
+        if (autoScanIntervalId) {
+          clearInterval(autoScanIntervalId);
+          autoScanIntervalId = null;
+        }
       }
 
       function extractIsbnFromText(text) {
@@ -859,8 +1002,11 @@
           setCameraStatus("映像を取得できません。");
           return;
         }
-        /* 枠の中央部分だけをOCRし、周辺の不要な部分を落として精度を上げる */
-        var cropped = centerCropCanvas(baseCanvas, 0.7);
+        if (container.classList.contains("video-rotate-90")) {
+          baseCanvas = rotateCanvas90(baseCanvas, -90);
+        }
+        var guideRect = getGuideCropRect(container, baseCanvas);
+        var cropped = guideRect ? cropCanvasToRect(baseCanvas, guideRect) : centerCropCanvas(baseCanvas, 0.7);
         var ocrCanvas = preprocessForOcr(cropped);
         var imageVariants = [
           ocrCanvas.toDataURL("image/png"),
@@ -1009,7 +1155,8 @@
           btnStop.disabled = false;
           btnCapture.disabled = false;
           btnOcr.disabled = false;
-          setCameraStatus("カメラ起動中。バーコードまたは「ISBN」の数字を枠に合わせて読み取るボタンを押してください。");
+          startAutoScan();
+          setCameraStatus("カメラ起動中。自動読み取りONのときは枠にバーコードを合わせると自動で登録します。");
         });
       }
 
@@ -1034,6 +1181,7 @@
       }
 
       function stopCamera() {
+        stopAutoScan();
         Quagga.offDetected();
         Quagga.stop();
         btnStart.disabled = false;
@@ -1078,6 +1226,14 @@
       btnStop.addEventListener("click", stopCamera);
       btnCapture.addEventListener("click", captureAndDecode);
       btnOcr.addEventListener("click", captureAndReadOcr);
+      if (autoScanCheckbox) {
+        autoScanCheckbox.addEventListener("change", function () {
+          if (btnStop && !btnStop.disabled) {
+            if (autoScanCheckbox.checked) startAutoScan();
+            else stopAutoScan();
+          }
+        });
+      }
       btnLookup.addEventListener("click", function () {
         doLookup(isbnInput.value.trim());
       });
